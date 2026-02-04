@@ -1,33 +1,40 @@
 name: Build Android APK
+
 on:
   push:
-    branches: [ "main" ] # 或者是 master，看你的主分支名
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-        cache: 'gradle'
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.27.0' # 建议填具体版本，或 'stable'
-        channel: 'stable'
-        cache: true
-    - name: Get Dependencies
-      run: flutter pub get
-    - name: Build APK
-      run: flutter build apk --release --no-tree-shake-icons
-    - name: Upload APK
-      uses: actions/upload-artifact@v3
-      with:
-        name: release-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
-        retention-days: 30
+      - uses: actions/checkout@v4  # 👈 顺手升级到 v4
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4 # 👈 顺手升级到 v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+          
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+          
+      - name: Get Dependencies
+        run: flutter pub get
+        
+      - name: Build APK
+        run: flutter build apk --release --no-tree-shake-icons
+        
+      # 👇👇👇 重点修改了这里 👇👇👇
+      - name: Upload APK
+        uses: actions/upload-artifact@v4  # 👈 必须改成 v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
