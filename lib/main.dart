@@ -1143,9 +1143,7 @@ class _HomePageState extends State<HomePage> {
         builder: (context, constraints) {
           bool isWide = constraints.maxWidth > 600;
 
-          // 1. 准备 4 个象限的内容
-          // 这里我们稍微改一下 _buildQuadrant，让它在 Tab 模式下不要显示标题（因为 Tab 栏上有标题）
-          // 但为了简单，我们先直接复用
+          // 准备 4 个象限
           List<Widget> quadrants = [
             _buildQuadrant(0, '重要且紧急', '立即去做！', Colors.red),
             _buildQuadrant(1, '重要不紧急', '制定计划', Colors.blue),
@@ -1156,115 +1154,41 @@ class _HomePageState extends State<HomePage> {
           Widget content;
 
           if (isWide) {
-            // --- 💻 宽屏/电脑模式 ---
+            // --- 💻 电脑模式 ---
             content = Column(
               children: [
-                // 👇 新增：AI 早报栏
-                if (_dailyQuote != null || _loadingQuote)
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.all(12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      // 根据深色模式调整背景
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.indigo.shade900.withOpacity(0.3)
-                          : Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.indigoAccent.withOpacity(0.3)
-                            : Colors.blue.shade100,
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 左边的机器人头像/图标
-                        const Icon(
-                          Icons.smart_toy_rounded,
-                          color: Colors.blueAccent,
-                          size: 28,
-                        ),
-                        const SizedBox(width: 12),
-
-                        // 右边的文字
-                        Expanded(
-                          child: _loadingQuote
-                              ? const Text(
-                                  'AI 正在观察你的状态...',
-                                  style: TextStyle(color: Colors.grey),
-                                )
-                              : Text(
-                                  _dailyQuote!,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    height: 1.4,
-                                    fontWeight: FontWeight.w500,
-                                    color:
-                                        Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.blue.shade100
-                                        : Colors.blue.shade900,
-                                  ),
-                                ),
-                        ),
-
-                        // 关闭按钮 (不想看的时候关掉)
-                        InkWell(
-                          onTap: () => setState(() => _dailyQuote = null),
-                          child: Icon(
-                            Icons.close,
-                            size: 18,
-                            color: Colors.grey.withOpacity(0.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ).animate().fadeIn().slideY(begin: -0.2, end: 0), // 加个丝滑入场动画
-                // ✅ 手动在这里给每个象限包上 Expanded
+                _buildAIBanner(), // 👈 直接调用刚才提取的组件
                 Expanded(
                   child: Row(
                     children: [
-                      Expanded(child: quadrants[0]), // 左上
-                      Expanded(child: quadrants[1]), // 右上
+                      Expanded(child: quadrants[0]),
+                      Expanded(child: quadrants[1]),
                     ],
                   ),
                 ),
                 Expanded(
                   child: Row(
                     children: [
-                      Expanded(child: quadrants[2]), // 左下
-                      Expanded(child: quadrants[3]), // 右下
+                      Expanded(child: quadrants[2]),
+                      Expanded(child: quadrants[3]),
                     ],
                   ),
                 ),
               ],
             );
           } else {
-            // --- 📱 手机模式：Tab 切换布局 (新功能) ---
-            // 使用 DefaultTabController 包裹，无需手动管理 Controller
+            // --- 📱 手机模式 (这里改动最大) ---
             return DefaultTabController(
               length: 4,
               child: Stack(
                 children: [
                   Scaffold(
-                    //把 TabBar 放在底部，更符合手机单手操作习惯
                     bottomNavigationBar: Material(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF1E1E1E)
-                          : Colors.white,
-                      elevation: 10,
-                      // 👇 1. 包裹一层 Padding
+                      // ... TabBar 样式保持不变 ...
                       child: Padding(
-                        padding: const EdgeInsets.only(
-                          right: 80.0,
-                        ), // 👈 给右边留出 80像素 的空间给 FAB
+                        padding: const EdgeInsets.only(right: 80.0),
                         child: TabBar(
-                          labelColor: Colors.blueAccent,
-                          unselectedLabelColor: Colors.grey,
-                          indicatorSize: TabBarIndicatorSize.label,
-                          // ... 其他属性不变 ...
+                          // ... TabBar配置保持不变 ...
                           tabs: const [
                             Tab(icon: Icon(Icons.flash_on), text: '紧急'),
                             Tab(icon: Icon(Icons.calendar_today), text: '计划'),
@@ -1274,11 +1198,19 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-                    body: TabBarView(
-                      children: quadrants, // 直接把 4 个象限放进去，可以左右滑动！
+                    // 👇👇👇 这里改了！用 Column 把 AI 早报和 TabBarView 竖着放 👇👇👇
+                    body: Column(
+                      children: [
+                        _buildAIBanner(), // 1. AI 早报放在最顶上
+                        Expanded(
+                          // 2. 剩下的空间给 Tab 页面
+                          child: TabBarView(children: quadrants),
+                        ),
+                      ],
                     ),
+                    // 👆👆👆 修改结束
                   ),
-                  // 别忘了把烟花层也加在手机模式里
+                  // 烟花层保持不变
                   Align(
                     alignment: Alignment.center,
                     child: ConfettiWidget(
@@ -1300,7 +1232,6 @@ class _HomePageState extends State<HomePage> {
               ),
             );
           }
-
           // --- 电脑模式的 Stack 返回 ---
           return Stack(
             children: [
@@ -1417,6 +1348,7 @@ class _HomePageState extends State<HomePage> {
               Divider(color: textColor.withValues(alpha: 0.2)),
               Expanded(
                 child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   itemCount: quadrantTasks.length,
                   itemBuilder: (context, index) {
                     final task = quadrantTasks[index];
@@ -1450,6 +1382,66 @@ class _HomePageState extends State<HomePage> {
       },
     );
   }
+  // ✨ 提取出来的 AI 早报组件，手机电脑都能用
+  Widget _buildAIBanner() {
+    // 如果没数据且不在加载，就隐藏
+    if (_dailyQuote == null && !_loadingQuote) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.indigo.shade900.withOpacity(0.3)
+            : Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.indigoAccent.withOpacity(0.3)
+              : Colors.blue.shade100,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.smart_toy_rounded,
+            color: Colors.blueAccent,
+            size: 28,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _loadingQuote
+                ? const Text(
+                    'AI 正在观察你的状态...',
+                    style: TextStyle(color: Colors.grey),
+                  )
+                : Text(
+                    _dailyQuote!,
+                    style: TextStyle(
+                      fontSize: 15,
+                      height: 1.4,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.blue.shade100
+                          : Colors.blue.shade900,
+                    ),
+                  ),
+          ),
+          InkWell(
+            onTap: () => setState(() => _dailyQuote = null),
+            child: Icon(
+              Icons.close,
+              size: 18,
+              color: Colors.grey.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn().slideY(begin: -0.2, end: 0);
+  }
+
   Widget _buildTaskCard(Task task, Color textColor) {
     // 1. 处理日期显示逻辑
     final isDark = Theme.of(context).brightness == Brightness.dark;
